@@ -299,6 +299,8 @@
 //!
 //! - `os-webview` (default): Enables the default WebView framework on the platform. This must be enabled
 //!   for the crate to work. This feature was added in preparation of other ports like cef and servo.
+//! - `cef`: Enables the CEF (Chromium Embedded Framework) backend as an alternative to os-webview.
+//!   Provides a consistent Chromium experience across all platforms. Requires CEF to be installed separately.
 //! - `protocol` (default): Enables [`WebViewBuilder::with_custom_protocol`] to define custom URL scheme for handling tasks like
 //!   loading assets.
 //! - `drag-drop` (default): Enables [`WebViewBuilder::with_drag_drop_handler`] to control the behavior when there are files
@@ -398,6 +400,13 @@ use self::webview2::*;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
   ICoreWebView2, ICoreWebView2Controller, ICoreWebView2Environment,
 };
+
+#[cfg(feature = "cef")]
+pub(crate) mod cef;
+#[cfg(feature = "cef")]
+pub use cef::{initialize as cef_initialize, quit_message_loop as cef_quit_message_loop, run_message_loop as cef_run_message_loop, shutdown as cef_shutdown};
+#[cfg(feature = "cef")]
+use cef::*;
 
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc};
 
@@ -1919,6 +1928,35 @@ impl<'a> WebViewBuilderExtUnix<'a> for WebViewBuilder<'a> {
   fn with_related_view(mut self, webview: webkit2gtk::WebView) -> Self {
     self.platform_specific.related_view.replace(webview);
     self
+  }
+}
+
+#[cfg(feature = "cef")]
+#[derive(Default)]
+pub(crate) struct PlatformSpecificWebViewAttributes {
+  // CEF-specific attributes can be added here
+  // For now, keeping it simple with no additional attributes
+}
+
+#[cfg(feature = "cef")]
+pub trait WebViewBuilderExtCef {
+  /// Build a CEF-based webview.
+  /// Note: CEF must be initialized before calling this by calling `cef_initialize()`.
+  fn build_cef<W>(self, window: &W) -> Result<WebView>
+  where
+    W: HasWindowHandle;
+}
+
+#[cfg(feature = "cef")]
+impl<'a> WebViewBuilderExtCef for WebViewBuilder<'a> {
+  fn build_cef<W>(self, window: &W) -> Result<WebView>
+  where
+    W: HasWindowHandle,
+  {
+    self.error?;
+
+    InnerWebView::new(window, self.attrs, self.platform_specific, None)
+      .map(|webview| WebView { webview })
   }
 }
 

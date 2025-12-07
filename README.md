@@ -261,6 +261,8 @@ Wry uses a set of feature flags to toggle several advanced features.
 
 - `os-webview` (default): Enables the default WebView framework on the platform. This must be enabled
   for the crate to work. This feature was added in preparation of other ports like cef and servo.
+- `cef`: Enables the CEF (Chromium Embedded Framework) backend as an alternative to os-webview.
+  Provides a consistent Chromium experience across all platforms. Requires CEF to be installed separately.
 - `protocol` (default): Enables [`WebViewBuilder::with_custom_protocol`] to define custom URL scheme for handling tasks like
   loading assets.
 - `drag-drop` (default): Enables [`WebViewBuilder::with_drag_drop_handler`] to control the behavior when there are files

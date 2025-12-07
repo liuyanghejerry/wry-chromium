@@ -40,6 +40,7 @@ os-webview = [
   "dep:gtk",
   "soup3",
 ]
+cef = ["dep:cef"]
 x11 = ["x11-dl", "gdkx11", "tao/x11"]
 tracing = ["dep:tracing"]
 
@@ -51,6 +52,7 @@ http = "1.1"
 raw-window-handle = { version = "0.6", features = ["std"] }
 dpi = "0.1"
 cookie = "0.18"
+cef = { version = "142.5", optional = true }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"openbsd\", target_os = \"netbsd\"))".dependencies]
 javascriptcore-rs = { version = "=1.1.2", features = [
