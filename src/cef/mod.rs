@@ -6,6 +6,26 @@
 //!
 //! This module provides a CEF-based webview implementation that offers
 //! a consistent Chromium experience across all platforms.
+//!
+//! # Important Note
+//!
+//! CEF integration with wry is currently experimental and has limitations:
+//!
+//! - CEF uses its own window management system, which differs from wry's design
+//!   where external windowing libraries (tao/winit) manage windows
+//! - Full integration would require either:
+//!   1. Using CEF's windowed mode (less integrated with external window libraries)
+//!   2. Using CEF's off-screen rendering mode (complex rendering pipeline)
+//! - The current implementation provides the foundation for CEF integration
+//!   but may require additional work for production use
+//!
+//! # Usage
+//!
+//! To use CEF backend:
+//! 1. Call `cef_initialize()` before creating any windows/webviews
+//! 2. Use `WebViewBuilderExtCef::build_cef()` to create webviews
+//! 3. Run the message loop with `cef_run_message_loop()`
+//! 4. Call `cef_shutdown()` before application exit
 
 use std::{
   borrow::Cow,

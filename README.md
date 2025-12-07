@@ -255,6 +255,65 @@ If this feels overwhelming, you can just use the preconfigured template from [`c
 
 For more information, check out [MOBILE.md](https://github.com/tauri-apps/wry/blob/dev/MOBILE.md).
 
+#### CEF (Chromium Embedded Framework)
+
+CEF provides a consistent Chromium experience across all platforms. To use the CEF backend:
+
+##### Installing CEF
+
+First, install the CEF binaries. The exact steps depend on your platform:
+
+**Linux or macOS:**
+```sh
+# You'll need to have the cef-rs repository cloned or use the export-cef-dir tool
+cargo install export-cef-dir
+export-cef-dir --force $HOME/.local/share/cef
+
+# Set environment variables
+export CEF_PATH="$HOME/.local/share/cef"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$CEF_PATH"  # Linux only
+export DYLD_FALLBACK_LIBRARY_PATH="$DYLD_FALLBACK_LIBRARY_PATH:$CEF_PATH"  # macOS only
+```
+
+**Windows (PowerShell):**
+```pwsh
+cargo install export-cef-dir
+export-cef-dir --force $env:USERPROFILE/.local/share/cef
+
+$env:CEF_PATH="$env:USERPROFILE/.local/share/cef"
+$env:PATH="$env:PATH;$env:CEF_PATH"
+```
+
+##### Using CEF in Your Application
+
+Enable the `cef` feature in your `Cargo.toml`:
+
+```toml
+[dependencies]
+wry = { version = "0.53", features = ["cef"], default-features = false }
+```
+
+Then initialize CEF before creating webviews:
+
+```rust
+// Initialize CEF (must be done before creating any webviews)
+if !wry::cef_initialize()? {
+    // This is a renderer process, exit
+    return Ok(());
+}
+
+// Create your window and webview as usual...
+// Note: CEF integration is experimental and has some limitations
+
+// Run CEF message loop
+wry::cef_run_message_loop();
+
+// Cleanup
+wry::cef_shutdown();
+```
+
+**Note:** CEF backend is currently experimental. CEF uses its own window management which differs from wry's design where external libraries (tao/winit) manage windows. See the `examples/cef_simple.rs` for more details.
+
 ### Feature flags
 
 Wry uses a set of feature flags to toggle several advanced features.
