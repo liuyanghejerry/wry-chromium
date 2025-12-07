@@ -69,7 +69,7 @@ impl InnerWebView {
     }
 
     // Create CEF client
-    let mut client = WryClient::new(attributes.clone());
+    let client = WryClient::new(attributes.clone())?;
 
     // Prepare URL
     let url = if let Some(url_str) = &attributes.url {
@@ -82,7 +82,7 @@ impl InnerWebView {
 
     // Create browser view
     let browser_view = browser_view_create(
-      Some(&mut client),
+      Some(&mut client.clone()), // Clone to get mutable reference
       Some(&url),
       Some(&Default::default()),
       Option::<&mut DictionaryValue>::None,
@@ -125,8 +125,10 @@ impl InnerWebView {
   }
 
   pub fn print(&self) -> Result<()> {
-    // CEF print functionality would be implemented here
-    Ok(())
+    // CEF print functionality is not yet implemented
+    Err(Error::InitializationError(
+      "Print functionality is not yet implemented for CEF backend".to_string(),
+    ))
   }
 
   pub fn url(&self) -> Result<String> {
@@ -140,23 +142,31 @@ impl InnerWebView {
   }
 
   pub fn bounds(&self) -> Result<Rect> {
-    // CEF view bounds would be queried here
-    Ok(Rect::default())
+    // CEF view bounds query is not yet implemented
+    Err(Error::InitializationError(
+      "Bounds query is not yet implemented for CEF backend".to_string(),
+    ))
   }
 
   pub fn set_bounds(&self, _bounds: Rect) -> Result<()> {
-    // CEF view bounds would be set here
-    Ok(())
+    // CEF view bounds setting is not yet implemented
+    Err(Error::InitializationError(
+      "Set bounds is not yet implemented for CEF backend".to_string(),
+    ))
   }
 
   pub fn set_visible(&self, _visible: bool) -> Result<()> {
-    // CEF view visibility would be set here
-    Ok(())
+    // CEF view visibility is not yet implemented
+    Err(Error::InitializationError(
+      "Set visible is not yet implemented for CEF backend".to_string(),
+    ))
   }
 
   pub fn focus(&self) -> Result<()> {
-    // CEF view focus would be set here
-    Ok(())
+    // CEF view focus is not yet implemented
+    Err(Error::InitializationError(
+      "Focus is not yet implemented for CEF backend".to_string(),
+    ))
   }
 }
 
@@ -266,7 +276,8 @@ wrap_browser_process_handler! {
   impl BrowserProcessHandler {
     fn on_context_initialized(&self) {
       // CEF context is initialized
-      println!("CEF context initialized");
+      #[cfg(feature = "tracing")]
+      tracing::info!("CEF context initialized");
     }
   }
 }
@@ -283,10 +294,37 @@ wrap_client! {
 }
 
 impl WryClient {
-  fn new(attributes: WebViewAttributes) -> Self {
+  fn new(attributes: WebViewAttributes) -> Result<Self> {
+    // Validate that unsupported features are not being used
+    if !attributes.custom_protocols.is_empty() {
+      return Err(Error::InitializationError(
+        "Custom protocols are not yet supported with CEF backend".to_string(),
+      ));
+    }
+    if attributes.ipc_handler.is_some() {
+      return Err(Error::InitializationError(
+        "IPC handler is not yet supported with CEF backend".to_string(),
+      ));
+    }
+    if attributes.drag_drop_handler.is_some() {
+      return Err(Error::InitializationError(
+        "Drag-drop handler is not yet supported with CEF backend".to_string(),
+      ));
+    }
+    if attributes.navigation_handler.is_some() {
+      return Err(Error::InitializationError(
+        "Navigation handler is not yet supported with CEF backend".to_string(),
+      ));
+    }
+
     // Convert to 'static lifetime by cloning necessary data
+    // Note: Only simple attributes are converted; complex handlers are validated above
     let static_attrs = WebViewAttributes {
-      id: attributes.id.map(|id| Box::leak(id.to_string().into_boxed_str()) as &str),
+      id: attributes.id.map(|id| {
+        // Leak the string to get 'static lifetime
+        // TODO: This causes a memory leak and should be replaced with Arc<str> or similar
+        Box::leak(id.to_string().into_boxed_str()) as &str
+      }),
       context: None, // Can't be made static easily
       user_agent: attributes.user_agent.clone(),
       visible: attributes.visible,
@@ -296,22 +334,22 @@ impl WryClient {
       headers: attributes.headers.clone(),
       html: attributes.html.clone(),
       initialization_scripts: attributes.initialization_scripts.clone(),
-      custom_protocols: vec![], // Would need special handling
-      ipc_handler: None,        // Would need special handling
-      drag_drop_handler: None,  // Would need special handling
-      navigation_handler: None, // Would need special handling
-      download_started_handler: None,
-      download_completed_handler: None,
-      new_window_req_handler: None,
+      custom_protocols: vec![],     // Already validated as empty
+      ipc_handler: None,            // Already validated as None
+      drag_drop_handler: None,      // Already validated as None
+      navigation_handler: None,     // Already validated as None
+      download_started_handler: None, // TODO: Implement
+      download_completed_handler: None, // TODO: Implement
+      new_window_req_handler: None, // TODO: Implement
       clipboard: attributes.clipboard,
       devtools: attributes.devtools,
       zoom_hotkeys_enabled: attributes.zoom_hotkeys_enabled,
       accept_first_mouse: attributes.accept_first_mouse,
       back_forward_navigation_gestures: attributes.back_forward_navigation_gestures,
-      document_title_changed_handler: None,
+      document_title_changed_handler: None, // TODO: Implement
       incognito: attributes.incognito,
       autoplay: attributes.autoplay,
-      on_page_load_handler: None,
+      on_page_load_handler: None, // TODO: Implement
       proxy_config: attributes.proxy_config.clone(),
       focused: attributes.focused,
       bounds: attributes.bounds,
@@ -319,6 +357,6 @@ impl WryClient {
       javascript_disabled: attributes.javascript_disabled,
     };
 
-    Self::allocate(static_attrs)
+    Ok(Self::allocate(static_attrs))
   }
 }
