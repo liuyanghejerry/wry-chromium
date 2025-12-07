@@ -62,7 +62,7 @@ impl InnerWebView {
   ) -> Result<Self> {
     // Ensure CEF is initialized
     if CEF_INITIALIZED.get().is_none() {
-      return Err(Error::InitializationError(
+      return Err(Error::CefError(
         "CEF must be initialized before creating WebView. Call cef::initialize() first."
           .to_string(),
       ));
@@ -89,7 +89,7 @@ impl InnerWebView {
       Option::<&mut RequestContext>::None,
       Option::<&mut BrowserViewDelegate>::None,
     )
-    .map_err(|e| Error::InitializationError(format!("Failed to create browser view: {:?}", e)))?;
+    .map_err(|e| Error::CefError(format!("Failed to create browser view: {:?}", e)))?;
 
     let browser = browser_view.browser();
 
@@ -126,7 +126,7 @@ impl InnerWebView {
 
   pub fn print(&self) -> Result<()> {
     // CEF print functionality is not yet implemented
-    Err(Error::InitializationError(
+    Err(Error::CefError(
       "Print functionality is not yet implemented for CEF backend".to_string(),
     ))
   }
@@ -143,28 +143,28 @@ impl InnerWebView {
 
   pub fn bounds(&self) -> Result<Rect> {
     // CEF view bounds query is not yet implemented
-    Err(Error::InitializationError(
+    Err(Error::CefError(
       "Bounds query is not yet implemented for CEF backend".to_string(),
     ))
   }
 
   pub fn set_bounds(&self, _bounds: Rect) -> Result<()> {
     // CEF view bounds setting is not yet implemented
-    Err(Error::InitializationError(
+    Err(Error::CefError(
       "Set bounds is not yet implemented for CEF backend".to_string(),
     ))
   }
 
   pub fn set_visible(&self, _visible: bool) -> Result<()> {
     // CEF view visibility is not yet implemented
-    Err(Error::InitializationError(
+    Err(Error::CefError(
       "Set visible is not yet implemented for CEF backend".to_string(),
     ))
   }
 
   pub fn focus(&self) -> Result<()> {
     // CEF view focus is not yet implemented
-    Err(Error::InitializationError(
+    Err(Error::CefError(
       "Focus is not yet implemented for CEF backend".to_string(),
     ))
   }
@@ -224,7 +224,7 @@ pub fn initialize() -> Result<bool> {
   );
 
   if init_result != 1 {
-    return Err(Error::InitializationError(
+    return Err(Error::CefError(
       "Failed to initialize CEF".to_string(),
     ));
   }
@@ -297,22 +297,22 @@ impl WryClient {
   fn new(attributes: WebViewAttributes) -> Result<Self> {
     // Validate that unsupported features are not being used
     if !attributes.custom_protocols.is_empty() {
-      return Err(Error::InitializationError(
+      return Err(Error::CefError(
         "Custom protocols are not yet supported with CEF backend".to_string(),
       ));
     }
     if attributes.ipc_handler.is_some() {
-      return Err(Error::InitializationError(
+      return Err(Error::CefError(
         "IPC handler is not yet supported with CEF backend".to_string(),
       ));
     }
     if attributes.drag_drop_handler.is_some() {
-      return Err(Error::InitializationError(
+      return Err(Error::CefError(
         "Drag-drop handler is not yet supported with CEF backend".to_string(),
       ));
     }
     if attributes.navigation_handler.is_some() {
-      return Err(Error::InitializationError(
+      return Err(Error::CefError(
         "Navigation handler is not yet supported with CEF backend".to_string(),
       ));
     }

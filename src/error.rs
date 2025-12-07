@@ -74,4 +74,7 @@ pub enum Error {
   #[cfg(any(target_os = "macos", target_os = "ios"))]
   #[error("data store is currently opened")]
   DataStoreInUse,
+  #[cfg(feature = "cef")]
+  #[error("CEF error: {0}")]
+  CefError(String),
 }
