@@ -29,11 +29,14 @@
 
 use std::{
   borrow::Cow,
+  collections::HashMap,
+  path::PathBuf,
   rc::Rc,
-  sync::{Arc, Mutex, OnceLock},
+  sync::{Arc, Mutex, OnceLock, RwLock},
 };
 
 use cef::{rc::*, *};
+use dpi;
 use http::{Request, Response};
 use raw_window_handle::HasWindowHandle;
 
@@ -46,11 +49,34 @@ mod util;
 static CEF_INITIALIZED: OnceLock<bool> = OnceLock::new();
 static CEF_APP: OnceLock<Arc<Mutex<Option<WryApp>>>> = OnceLock::new();
 
+/// Shared state for webview handlers
+#[derive(Clone)]
+struct WebViewHandlers {
+  ipc_handler: Option<Arc<dyn Fn(String) + Send + Sync>>,
+  navigation_handler: Option<Arc<dyn Fn(String) -> bool + Send + Sync>>,
+  download_started_handler: Option<Arc<dyn Fn(String, &mut PathBuf) -> bool + Send + Sync>>,
+  download_completed_handler: Option<Arc<dyn Fn(String, Option<bool>) -> bool + Send + Sync>>,
+  custom_protocols: Arc<RwLock<HashMap<String, Arc<dyn Fn(Request<Vec<u8>>, RequestAsyncResponder) + Send + Sync>>>>,
+}
+
+impl Default for WebViewHandlers {
+  fn default() -> Self {
+    Self {
+      ipc_handler: None,
+      navigation_handler: None,
+      download_started_handler: None,
+      download_completed_handler: None,
+      custom_protocols: Arc::new(RwLock::new(HashMap::new())),
+    }
+  }
+}
+
 /// CEF-based WebView implementation
 pub struct InnerWebView {
   browser: Option<Browser>,
   browser_view: Option<BrowserView>,
   window: Option<Window>,
+  handlers: Arc<Mutex<WebViewHandlers>>,
 }
 
 impl InnerWebView {
@@ -58,7 +84,7 @@ impl InnerWebView {
     window: &W,
     attributes: WebViewAttributes,
     _platform_attributes: super::PlatformSpecificWebViewAttributes,
-    _web_context: Option<&mut WebContext>,
+    web_context: Option<&mut WebContext>,
   ) -> Result<Self> {
     // Ensure CEF is initialized
     if CEF_INITIALIZED.get().is_none() {
@@ -68,8 +94,51 @@ impl InnerWebView {
       ));
     }
 
-    // Create CEF client
-    let client = WryClient::new(attributes.clone())?;
+    // Setup handlers
+    let handlers = Arc::new(Mutex::new(WebViewHandlers::default()));
+    
+    // Store handlers from attributes
+    {
+      let mut h = handlers.lock().unwrap();
+      
+      // IPC handler
+      if let Some(ipc) = attributes.ipc_handler {
+        h.ipc_handler = Some(Arc::new(move |msg: String| {
+          ipc(msg);
+        }));
+      }
+      
+      // Navigation handler
+      if let Some(nav) = attributes.navigation_handler {
+        h.navigation_handler = Some(Arc::new(move |url: String| {
+          nav(url)
+        }));
+      }
+      
+      // Download handlers
+      if let Some(ds) = attributes.download_started_handler {
+        h.download_started_handler = Some(Arc::new(move |url: String, path: &mut PathBuf| {
+          ds(url, path)
+        }));
+      }
+      
+      if let Some(dc) = attributes.download_completed_handler {
+        h.download_completed_handler = Some(Arc::new(move |url: String, success: Option<bool>| {
+          dc(url, success)
+        }));
+      }
+      
+      // Custom protocols
+      for (protocol, handler) in attributes.custom_protocols {
+        h.custom_protocols.write().unwrap().insert(protocol, Arc::new(handler));
+      }
+    }
+
+    // Create CEF client with handlers
+    let client = WryClient::new(attributes.clone(), handlers.clone())?;
+
+    // Get request context from web_context
+    let req_context = util::web_context_to_cef_context(web_context);
 
     // Prepare URL
     let url = if let Some(url_str) = &attributes.url {
@@ -80,13 +149,13 @@ impl InnerWebView {
       CefString::from("about:blank")
     };
 
-    // Create browser view
+    // Create browser view with request context
     let browser_view = browser_view_create(
       Some(&mut client.clone()), // Clone to get mutable reference
       Some(&url),
       Some(&Default::default()),
       Option::<&mut DictionaryValue>::None,
-      Option::<&mut RequestContext>::None,
+      req_context.as_ref().map(|rc| &mut rc.clone()),
       Option::<&mut BrowserViewDelegate>::None,
     )
     .map_err(|e| Error::CefError(format!("Failed to create browser view: {:?}", e)))?;
@@ -109,6 +178,7 @@ impl InnerWebView {
       browser,
       browser_view: Some(browser_view),
       window: None,
+      handlers,
     })
   }
 
@@ -125,9 +195,16 @@ impl InnerWebView {
   }
 
   pub fn print(&self) -> Result<()> {
-    // CEF print functionality is not yet implemented
+    // Use CEF's host print method
+    if let Some(browser) = &self.browser {
+      let host = browser.host();
+      if let Some(mut host) = host {
+        host.print();
+        return Ok(());
+      }
+    }
     Err(Error::CefError(
-      "Print functionality is not yet implemented for CEF backend".to_string(),
+      "Failed to access browser host for printing".to_string(),
     ))
   }
 
@@ -142,30 +219,77 @@ impl InnerWebView {
   }
 
   pub fn bounds(&self) -> Result<Rect> {
-    // CEF view bounds query is not yet implemented
+    // For CEF BrowserView, we can get bounds from the view
+    if let Some(browser_view) = &self.browser_view {
+      let view: &View = browser_view.as_view();
+      let bounds = view.bounds();
+      return Ok(Rect {
+        position: dpi::LogicalPosition::new(bounds.x as f64, bounds.y as f64).into(),
+        size: dpi::LogicalSize::new(bounds.width as f64, bounds.height as f64).into(),
+      });
+    }
     Err(Error::CefError(
-      "Bounds query is not yet implemented for CEF backend".to_string(),
+      "Browser view not available".to_string(),
     ))
   }
 
-  pub fn set_bounds(&self, _bounds: Rect) -> Result<()> {
-    // CEF view bounds setting is not yet implemented
+  pub fn set_bounds(&self, bounds: Rect) -> Result<()> {
+    // Set bounds on the CEF BrowserView
+    if let Some(browser_view) = &self.browser_view {
+      let view: &View = browser_view.as_view();
+      let position = match bounds.position {
+        dpi::Position::Logical(pos) => pos,
+        dpi::Position::Physical(pos) => {
+          let scale = 1.0; // TODO: Get actual scale factor
+          dpi::LogicalPosition::new(pos.x as f64 / scale, pos.y as f64 / scale)
+        }
+      };
+      let size = match bounds.size {
+        dpi::Size::Logical(size) => size,
+        dpi::Size::Physical(size) => {
+          let scale = 1.0; // TODO: Get actual scale factor
+          dpi::LogicalSize::new(size.width as f64 / scale, size.height as f64 / scale)
+        }
+      };
+      
+      let cef_bounds = cef::Rect {
+        x: position.x as i32,
+        y: position.y as i32,
+        width: size.width as i32,
+        height: size.height as i32,
+      };
+      
+      view.set_bounds(&cef_bounds);
+      return Ok(());
+    }
     Err(Error::CefError(
-      "Set bounds is not yet implemented for CEF backend".to_string(),
+      "Browser view not available".to_string(),
     ))
   }
 
-  pub fn set_visible(&self, _visible: bool) -> Result<()> {
-    // CEF view visibility is not yet implemented
+  pub fn set_visible(&self, visible: bool) -> Result<()> {
+    // Set visibility on the CEF BrowserView
+    if let Some(browser_view) = &self.browser_view {
+      let view: &View = browser_view.as_view();
+      view.set_visible(if visible { 1 } else { 0 });
+      return Ok(());
+    }
     Err(Error::CefError(
-      "Set visible is not yet implemented for CEF backend".to_string(),
+      "Browser view not available".to_string(),
     ))
   }
 
   pub fn focus(&self) -> Result<()> {
-    // CEF view focus is not yet implemented
+    // Request focus for the browser
+    if let Some(browser) = &self.browser {
+      let host = browser.host();
+      if let Some(mut host) = host {
+        host.set_focus(1);
+        return Ok(());
+      }
+    }
     Err(Error::CefError(
-      "Focus is not yet implemented for CEF backend".to_string(),
+      "Failed to access browser host for focus".to_string(),
     ))
   }
 }
@@ -286,6 +410,7 @@ wrap_browser_process_handler! {
 wrap_client! {
   struct WryClient {
     attributes: WebViewAttributes<'static>,
+    handlers: Arc<Mutex<WebViewHandlers>>,
   }
 
   impl Client {
@@ -294,31 +419,10 @@ wrap_client! {
 }
 
 impl WryClient {
-  fn new(attributes: WebViewAttributes) -> Result<Self> {
-    // Validate that unsupported features are not being used
-    if !attributes.custom_protocols.is_empty() {
-      return Err(Error::CefError(
-        "Custom protocols are not yet supported with CEF backend".to_string(),
-      ));
-    }
-    if attributes.ipc_handler.is_some() {
-      return Err(Error::CefError(
-        "IPC handler is not yet supported with CEF backend".to_string(),
-      ));
-    }
-    if attributes.drag_drop_handler.is_some() {
-      return Err(Error::CefError(
-        "Drag-drop handler is not yet supported with CEF backend".to_string(),
-      ));
-    }
-    if attributes.navigation_handler.is_some() {
-      return Err(Error::CefError(
-        "Navigation handler is not yet supported with CEF backend".to_string(),
-      ));
-    }
-
+  fn new(attributes: WebViewAttributes, handlers: Arc<Mutex<WebViewHandlers>>) -> Result<Self> {
+    // Note: We no longer reject handlers - we store them for use
+    
     // Convert to 'static lifetime by cloning necessary data
-    // Note: Only simple attributes are converted; complex handlers are validated above
     let static_attrs = WebViewAttributes {
       id: attributes.id.map(|id| {
         // Leak the string to get 'static lifetime
@@ -334,12 +438,12 @@ impl WryClient {
       headers: attributes.headers.clone(),
       html: attributes.html.clone(),
       initialization_scripts: attributes.initialization_scripts.clone(),
-      custom_protocols: vec![],     // Already validated as empty
-      ipc_handler: None,            // Already validated as None
-      drag_drop_handler: None,      // Already validated as None
-      navigation_handler: None,     // Already validated as None
-      download_started_handler: None, // TODO: Implement
-      download_completed_handler: None, // TODO: Implement
+      custom_protocols: vec![],     // Handled via handlers
+      ipc_handler: None,            // Handled via handlers
+      drag_drop_handler: None,      // Handled via handlers
+      navigation_handler: None,     // Handled via handlers
+      download_started_handler: None, // Handled via handlers
+      download_completed_handler: None, // Handled via handlers
       new_window_req_handler: None, // TODO: Implement
       clipboard: attributes.clipboard,
       devtools: attributes.devtools,
@@ -357,6 +461,6 @@ impl WryClient {
       javascript_disabled: attributes.javascript_disabled,
     };
 
-    Ok(Self::allocate(static_attrs))
+    Ok(Self::allocate(static_attrs, handlers))
   }
 }

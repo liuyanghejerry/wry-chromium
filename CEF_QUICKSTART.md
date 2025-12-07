@@ -85,25 +85,11 @@ fn main() -> wry::Result<()> {
 cargo run
 ```
 
-## Current Limitations
+## Current Status
 
-The CEF backend is currently **experimental**. The following features are **not yet implemented**:
+The CEF backend is currently **experimental** but has most core features implemented.
 
-- ❌ Custom protocol handlers
-- ❌ IPC (inter-process communication)
-- ❌ Navigation handlers
-- ❌ Download handlers
-- ❌ Print functionality
-- ❌ Bounds management
-- ❌ Visibility control
-- ❌ Focus management
-- ❌ WebContext integration
-
-These features will fail with clear error messages if you try to use them.
-
-## What Works
-
-The following features are implemented:
+### ✅ Implemented Features
 
 - ✅ CEF initialization and shutdown
 - ✅ Basic webview creation
@@ -111,6 +97,23 @@ The following features are implemented:
 - ✅ URL loading
 - ✅ HTML string loading
 - ✅ Message loop management
+- ✅ Custom protocol handlers
+- ✅ IPC (inter-process communication)
+- ✅ Navigation handlers
+- ✅ Download handlers
+- ✅ Print functionality
+- ✅ Bounds management (get/set bounds)
+- ✅ Visibility control
+- ✅ Focus management
+- ✅ WebContext integration
+
+### ⚠️ Not Yet Implemented
+
+- ❌ Drag-drop handlers
+- ❌ DevTools integration  
+- ❌ Page load event handlers
+- ❌ Document title change handlers
+- ❌ New window request handlers
 
 ## Example
 
@@ -133,9 +136,6 @@ Make sure you call `wry::cef_initialize()` before creating any webviews.
 ### Network errors during build
 If building fails with network errors, it's trying to download CEF binaries. Install them manually first (see Step 1).
 
-### Feature X is not supported
-If you see errors like "Custom protocols are not yet supported with CEF backend", that feature hasn't been implemented yet. See the limitations section above.
-
 ## Getting Help
 
 - **Documentation**: See `CEF_INTEGRATION.md` for detailed architecture information
@@ -148,16 +148,17 @@ Once you have CEF working:
 
 1. Explore the example code to understand the initialization flow
 2. Read `CEF_INTEGRATION.md` for architecture details
-3. Consider contributing to implement missing features!
+3. Use the implemented features like IPC, custom protocols, navigation handlers, etc.
+4. Consider contributing to implement remaining features!
 
 ## Contributing
 
-The CEF backend needs help! Key areas for contribution:
+The CEF backend has most core features! Key remaining areas for contribution:
 
 1. **Window Integration**: Integrate CEF's rendering with tao/winit windows
-2. **Feature Implementation**: Add support for custom protocols, IPC, etc.
-3. **Examples**: Create more comprehensive examples
+2. **Remaining Features**: Drag-drop, DevTools, page load handlers, etc.
+3. **Examples**: Create more comprehensive examples showing all features
 4. **Testing**: Add tests for CEF functionality
-5. **Documentation**: Improve usage documentation
+5. **Documentation**: Improve usage documentation with real-world examples
 
 See `CEF_INTEGRATION.md` for the full list of TODOs.

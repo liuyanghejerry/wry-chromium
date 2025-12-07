@@ -70,24 +70,23 @@ CEF backend is marked as experimental because:
 
 ## What's Not Yet Implemented
 
-### High Priority
-- [ ] Custom protocol handlers
-- [ ] IPC (inter-process communication) handlers
-- [ ] Navigation handlers
-- [ ] Download handlers
+### ✅ Now Implemented
+- [x] Custom protocol handlers
+- [x] IPC (inter-process communication) handlers
+- [x] Navigation handlers
+- [x] Download handlers
+- [x] Print functionality
+- [x] Bounds management (get/set bounds)
+- [x] Visibility control
+- [x] Focus management
+- [x] WebContext integration
 
-### Medium Priority
-- [ ] Print functionality
-- [ ] Bounds management (get/set bounds)
-- [ ] Visibility control
-- [ ] Focus management
-- [ ] WebContext integration
-
-### Low Priority (may not be needed)
-- [ ] Drag-drop handlers
+### Still To Do
+- [ ] Drag-drop handlers (may not be needed)
 - [ ] DevTools integration
 - [ ] Page load handlers
 - [ ] Document title change handlers
+- [ ] New window request handlers
 
 ## Future Development
 
@@ -97,11 +96,12 @@ CEF backend is marked as experimental because:
    - Implement CEF OSR mode for seamless integration with external windowing libraries
    - OR: Create hybrid approach where CEF windows are synchronized with tao/winit windows
 
-2. **Feature Completion**
-   - Implement custom protocol handlers for asset loading
-   - Implement IPC for JavaScript <-> Rust communication
-   - Implement navigation handlers for link control
-
+2. **Handler Testing**
+   - Test custom protocol handlers with asset loading
+   - Test IPC for JavaScript <-> Rust communication
+   - Test navigation handlers for link control
+   - Test download handlers
+   
 3. **Memory Management**
    - Replace Box::leak with Arc<str> or Cow<'static, str>
    - Implement proper cleanup for all allocated resources

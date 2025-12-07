@@ -4,19 +4,34 @@
 
 //! Utility functions for CEF backend
 
+use cef::{rc::*, *};
+
 /// Helper function to convert web context to CEF request context
 pub fn web_context_to_cef_context(
-  _web_context: Option<&mut crate::WebContext>,
-) -> Option<cef::RequestContext> {
-  // TODO: Implement conversion from WebContext to CEF RequestContext
-  // For now, return None which means CEF will use the default request context
-  // 
-  // A proper implementation would:
-  // 1. Extract data directory from WebContext
-  // 2. Create a CEF RequestContext with that data directory
-  // 3. Configure additional settings from WebContext
-  //
-  // Note: Until this is implemented, CEF webviews will not share context
-  // with other wry webviews when using WebContext
+  web_context: Option<&mut crate::WebContext>,
+) -> Option<RequestContext> {
+  if let Some(ctx) = web_context {
+    // Get the data directory from WebContext
+    if let Some(data_dir) = ctx.data_directory() {
+      // Create a CEF request context with the data directory
+      let cache_path = CefString::from(data_dir.to_string_lossy().as_ref());
+      
+      // Create request context settings
+      let settings = RequestContextSettings {
+        cache_path: Some(&cache_path),
+        persist_session_cookies: 1,
+        accept_language_list: None,
+        cookieable_schemes_list: None,
+        cookieable_schemes_exclude_defaults: 0,
+      };
+      
+      // Create and return the request context
+      if let Ok(req_ctx) = request_context_create_context(&settings, None) {
+        return Some(req_ctx);
+      }
+    }
+  }
+  
+  // Return None if no context or failed to create, CEF will use default
   None
 }
