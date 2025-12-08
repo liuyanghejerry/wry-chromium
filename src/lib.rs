@@ -404,9 +404,12 @@ use webview2_com::Microsoft::Web::WebView2::Win32::{
 #[cfg(feature = "cef")]
 pub(crate) mod cef;
 #[cfg(feature = "cef")]
-pub use cef::{initialize as cef_initialize, quit_message_loop as cef_quit_message_loop, run_message_loop as cef_run_message_loop, shutdown as cef_shutdown};
-#[cfg(feature = "cef")]
 use cef::*;
+#[cfg(feature = "cef")]
+pub use cef::{
+  initialize as cef_initialize, quit_message_loop as cef_quit_message_loop,
+  run_message_loop as cef_run_message_loop, shutdown as cef_shutdown,
+};
 
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc};
 

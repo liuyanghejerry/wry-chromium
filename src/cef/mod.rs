@@ -56,7 +56,9 @@ struct WebViewHandlers {
   navigation_handler: Option<Arc<dyn Fn(String) -> bool + Send + Sync>>,
   download_started_handler: Option<Arc<dyn Fn(String, &mut PathBuf) -> bool + Send + Sync>>,
   download_completed_handler: Option<Arc<dyn Fn(String, Option<bool>) -> bool + Send + Sync>>,
-  custom_protocols: Arc<RwLock<HashMap<String, Arc<dyn Fn(Request<Vec<u8>>, RequestAsyncResponder) + Send + Sync>>>>,
+  custom_protocols: Arc<
+    RwLock<HashMap<String, Arc<dyn Fn(Request<Vec<u8>>, RequestAsyncResponder) + Send + Sync>>>,
+  >,
 }
 
 impl Default for WebViewHandlers {
@@ -96,41 +98,42 @@ impl InnerWebView {
 
     // Setup handlers
     let handlers = Arc::new(Mutex::new(WebViewHandlers::default()));
-    
+
     // Store handlers from attributes
     {
       let mut h = handlers.lock().unwrap();
-      
+
       // IPC handler
       if let Some(ipc) = attributes.ipc_handler {
         h.ipc_handler = Some(Arc::new(move |msg: String| {
           ipc(msg);
         }));
       }
-      
+
       // Navigation handler
       if let Some(nav) = attributes.navigation_handler {
-        h.navigation_handler = Some(Arc::new(move |url: String| {
-          nav(url)
-        }));
+        h.navigation_handler = Some(Arc::new(move |url: String| nav(url)));
       }
-      
+
       // Download handlers
       if let Some(ds) = attributes.download_started_handler {
         h.download_started_handler = Some(Arc::new(move |url: String, path: &mut PathBuf| {
           ds(url, path)
         }));
       }
-      
+
       if let Some(dc) = attributes.download_completed_handler {
         h.download_completed_handler = Some(Arc::new(move |url: String, success: Option<bool>| {
           dc(url, success)
         }));
       }
-      
+
       // Custom protocols
       for (protocol, handler) in attributes.custom_protocols {
-        h.custom_protocols.write().unwrap().insert(protocol, Arc::new(handler));
+        h.custom_protocols
+          .write()
+          .unwrap()
+          .insert(protocol, Arc::new(handler));
       }
     }
 
@@ -182,7 +185,11 @@ impl InnerWebView {
     })
   }
 
-  pub fn eval(&self, js: &str, _callback: Option<impl FnOnce(String) + Send + 'static>) -> Result<()> {
+  pub fn eval(
+    &self,
+    js: &str,
+    _callback: Option<impl FnOnce(String) + Send + 'static>,
+  ) -> Result<()> {
     if let Some(browser) = &self.browser {
       let frame = browser.main_frame();
       if let Some(mut frame) = frame {
@@ -228,9 +235,7 @@ impl InnerWebView {
         size: dpi::LogicalSize::new(bounds.width as f64, bounds.height as f64).into(),
       });
     }
-    Err(Error::CefError(
-      "Browser view not available".to_string(),
-    ))
+    Err(Error::CefError("Browser view not available".to_string()))
   }
 
   pub fn set_bounds(&self, bounds: Rect) -> Result<()> {
@@ -251,20 +256,18 @@ impl InnerWebView {
           dpi::LogicalSize::new(size.width as f64 / scale, size.height as f64 / scale)
         }
       };
-      
+
       let cef_bounds = cef::Rect {
         x: position.x as i32,
         y: position.y as i32,
         width: size.width as i32,
         height: size.height as i32,
       };
-      
+
       view.set_bounds(&cef_bounds);
       return Ok(());
     }
-    Err(Error::CefError(
-      "Browser view not available".to_string(),
-    ))
+    Err(Error::CefError("Browser view not available".to_string()))
   }
 
   pub fn set_visible(&self, visible: bool) -> Result<()> {
@@ -274,9 +277,7 @@ impl InnerWebView {
       view.set_visible(if visible { 1 } else { 0 });
       return Ok(());
     }
-    Err(Error::CefError(
-      "Browser view not available".to_string(),
-    ))
+    Err(Error::CefError("Browser view not available".to_string()))
   }
 
   pub fn focus(&self) -> Result<()> {
@@ -327,7 +328,11 @@ pub fn initialize() -> Result<bool> {
   let app_ref = app_guard.as_mut().unwrap();
 
   // Execute process
-  let ret = execute_process(Some(args.as_main_args()), Some(app_ref), std::ptr::null_mut());
+  let ret = execute_process(
+    Some(args.as_main_args()),
+    Some(app_ref),
+    std::ptr::null_mut(),
+  );
 
   if !is_browser_process {
     // This is a renderer or other helper process
@@ -348,9 +353,7 @@ pub fn initialize() -> Result<bool> {
   );
 
   if init_result != 1 {
-    return Err(Error::CefError(
-      "Failed to initialize CEF".to_string(),
-    ));
+    return Err(Error::CefError("Failed to initialize CEF".to_string()));
   }
 
   CEF_INITIALIZED.get_or_init(|| true);
@@ -421,7 +424,7 @@ wrap_client! {
 impl WryClient {
   fn new(attributes: WebViewAttributes, handlers: Arc<Mutex<WebViewHandlers>>) -> Result<Self> {
     // Note: We no longer reject handlers - we store them for use
-    
+
     // Convert to 'static lifetime by cloning necessary data
     let static_attrs = WebViewAttributes {
       id: attributes.id.map(|id| {
@@ -438,13 +441,13 @@ impl WryClient {
       headers: attributes.headers.clone(),
       html: attributes.html.clone(),
       initialization_scripts: attributes.initialization_scripts.clone(),
-      custom_protocols: vec![],     // Handled via handlers
-      ipc_handler: None,            // Handled via handlers
-      drag_drop_handler: None,      // Handled via handlers
-      navigation_handler: None,     // Handled via handlers
-      download_started_handler: None, // Handled via handlers
+      custom_protocols: vec![],         // Handled via handlers
+      ipc_handler: None,                // Handled via handlers
+      drag_drop_handler: None,          // Handled via handlers
+      navigation_handler: None,         // Handled via handlers
+      download_started_handler: None,   // Handled via handlers
       download_completed_handler: None, // Handled via handlers
-      new_window_req_handler: None, // TODO: Implement
+      new_window_req_handler: None,     // TODO: Implement
       clipboard: attributes.clipboard,
       devtools: attributes.devtools,
       zoom_hotkeys_enabled: attributes.zoom_hotkeys_enabled,

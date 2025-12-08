@@ -68,7 +68,7 @@ fn main() -> wry::Result<()> {
   // - Creating a window (using tao, winit, or CEF's own window system)
   // - Using WebViewBuilderExtCef::build_cef() to create the webview
   // - Running the CEF message loop
-  
+
   println!("CEF Integration Structure:");
   println!("  1. Call wry::cef_initialize() - ✓ Done");
   println!("  2. Create window with your windowing library");

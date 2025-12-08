@@ -37,8 +37,8 @@
 
 #[cfg(feature = "cef")]
 fn main() -> wry::Result<()> {
-  use std::sync::{Arc, Mutex};
   use cef::{rc::*, *};
+  use std::sync::{Arc, Mutex};
 
   println!("╔════════════════════════════════════════════════════════════╗");
   println!("║           Wry CEF Demo - Loading Google                   ║");
@@ -56,11 +56,11 @@ fn main() -> wry::Result<()> {
 
   // Step 2: Setup CEF window and browser
   println!("🪟 Step 2: Creating window and browser...");
-  
+
   // Shared window reference
   let window = Arc::new(Mutex::new(None));
   let window_for_handler = window.clone();
-  
+
   // Create browser process handler
   wrap_browser_process_handler! {
     struct DemoBrowserProcessHandler {
@@ -70,16 +70,16 @@ fn main() -> wry::Result<()> {
     impl BrowserProcessHandler {
       fn on_context_initialized(&self) {
         println!("   ✅ CEF context initialized");
-        
+
         // Create client
         let mut client = DemoClient::new();
-        
+
         // Set URL to Google
         let url = CefString::from("https://www.google.com");
         println!();
         println!("🌐 Step 3: Loading Google...");
         println!("   URL: https://www.google.com");
-        
+
         // Create browser view
         let browser_view = match browser_view_create(
           Some(&mut client),
@@ -98,10 +98,10 @@ fn main() -> wry::Result<()> {
             return;
           }
         };
-        
+
         // Create window delegate
         let mut delegate = DemoWindowDelegate::new(browser_view);
-        
+
         // Create window
         match window_create_top_level(Some(&mut delegate)) {
           Ok(win) => {
@@ -124,7 +124,7 @@ fn main() -> wry::Result<()> {
             println!("🛑 To exit:");
             println!("   • Close the window, or press Ctrl+C");
             println!();
-            
+
             if let Ok(mut w) = self.window.lock() {
               *w = Some(win);
             }
@@ -136,11 +136,11 @@ fn main() -> wry::Result<()> {
       }
     }
   }
-  
+
   // Create client with handlers
   wrap_client! {
     struct DemoClient;
-    
+
     impl Client {
       fn on_process_message_received(
         &self,
@@ -154,7 +154,7 @@ fn main() -> wry::Result<()> {
       }
     }
   }
-  
+
   // Create window delegate
   wrap_window_delegate! {
     struct DemoWindowDelegate {
@@ -179,11 +179,11 @@ fn main() -> wry::Result<()> {
           // Add browser view to window
           let view = self.browser_view.clone();
           window.add_child_view(Some(&mut (&view).into()));
-          
+
           // Set window title
           let title = CefString::from("Wry CEF Demo - Google");
           window.set_title(Some(&title));
-          
+
           // Show window
           window.show();
         }
@@ -216,7 +216,7 @@ fn main() -> wry::Result<()> {
       }
     }
   }
-  
+
   // Create app
   wrap_app! {
     struct DemoApp {
@@ -229,16 +229,16 @@ fn main() -> wry::Result<()> {
       }
     }
   }
-  
+
   let _app = DemoApp::new(window_for_handler);
-  
+
   // Step 4: Run message loop
   println!("⏳ Running CEF message loop...");
   println!("   (Waiting for window events...)");
   println!();
-  
+
   wry::cef_run_message_loop();
-  
+
   // Step 5: Cleanup
   println!();
   println!("🧹 Cleaning up...");

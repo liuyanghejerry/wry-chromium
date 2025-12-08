@@ -15,7 +15,7 @@ pub fn web_context_to_cef_context(
     if let Some(data_dir) = ctx.data_directory() {
       // Create a CEF request context with the data directory
       let cache_path = CefString::from(data_dir.to_string_lossy().as_ref());
-      
+
       // Create request context settings
       let settings = RequestContextSettings {
         cache_path: Some(&cache_path),
@@ -24,14 +24,14 @@ pub fn web_context_to_cef_context(
         cookieable_schemes_list: None,
         cookieable_schemes_exclude_defaults: 0,
       };
-      
+
       // Create and return the request context
       if let Ok(req_ctx) = request_context_create_context(&settings, None) {
         return Some(req_ctx);
       }
     }
   }
-  
+
   // Return None if no context or failed to create, CEF will use default
   None
 }
