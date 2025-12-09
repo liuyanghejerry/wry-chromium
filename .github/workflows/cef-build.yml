@@ -82,23 +82,25 @@ jobs:
       - name: Build summary
         if: always()
         run: |
-          echo "## CEF Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Platform:** ${{ matrix.platform.target }}" >> $GITHUB_STEP_SUMMARY
-          echo "**OS:** ${{ matrix.platform.os }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Notes" >> $GITHUB_STEP_SUMMARY
-          echo "- CEF feature requires CEF binaries to be installed" >> $GITHUB_STEP_SUMMARY
-          echo "- Full build requires ~200MB download" >> $GITHUB_STEP_SUMMARY
-          echo "- This workflow validates syntax and module structure" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### For local testing:" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo 'cargo install export-cef-dir' >> $GITHUB_STEP_SUMMARY
-          echo 'export-cef-dir --force $HOME/.local/share/cef' >> $GITHUB_STEP_SUMMARY
-          echo 'export CEF_PATH="$HOME/.local/share/cef"' >> $GITHUB_STEP_SUMMARY
-          echo 'cargo build --features cef --no-default-features' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## CEF Build Summary"
+            echo ""
+            echo "**Platform:** ${{ matrix.platform.target }}"
+            echo "**OS:** ${{ matrix.platform.os }}"
+            echo ""
+            echo "### Notes"
+            echo "- CEF feature requires CEF binaries to be installed"
+            echo "- Full build requires ~200MB download"
+            echo "- This workflow validates syntax and module structure"
+            echo ""
+            echo "### For local testing:"
+            echo '```bash'
+            echo 'cargo install export-cef-dir'
+            echo 'export-cef-dir --force $HOME/.local/share/cef'
+            echo 'export CEF_PATH="$HOME/.local/share/cef"'
+            echo 'cargo build --features cef --no-default-features'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
         shell: bash
 
   cef-documentation:
@@ -112,42 +114,45 @@ jobs:
       - name: Check documentation files
         run: |
           echo "Checking CEF documentation files..."
-          test -f README.md
-          test -f CEF_INTEGRATION.md
-          test -f CEF_QUICKSTART.md
-          test -f examples/CEF_DEMO_README.md
-          test -f examples/cef_simple.rs
-          test -f examples/cef_demo.rs
-          test -f src/cef/mod.rs
-          test -f src/cef/util.rs
+          test -f README.md || { echo "❌ README.md missing"; exit 1; }
+          test -f CEF_INTEGRATION.md || { echo "❌ CEF_INTEGRATION.md missing"; exit 1; }
+          test -f CEF_QUICKSTART.md || { echo "❌ CEF_QUICKSTART.md missing"; exit 1; }
+          test -f examples/CEF_DEMO_README.md || { echo "❌ examples/CEF_DEMO_README.md missing"; exit 1; }
+          test -f examples/cef_simple.rs || { echo "❌ examples/cef_simple.rs missing"; exit 1; }
+          test -f examples/cef_demo.rs || { echo "❌ examples/cef_demo.rs missing"; exit 1; }
+          test -f src/cef/mod.rs || { echo "❌ src/cef/mod.rs missing"; exit 1; }
+          test -f src/cef/util.rs || { echo "❌ src/cef/util.rs missing"; exit 1; }
           echo "✅ All CEF documentation and example files present"
       
       - name: Validate documentation structure
         run: |
           echo "Checking documentation completeness..."
-          grep -q "Custom protocol handlers" CEF_INTEGRATION.md
-          grep -q "IPC" CEF_INTEGRATION.md
-          grep -q "Navigation handlers" CEF_INTEGRATION.md
-          grep -q "Download handlers" CEF_INTEGRATION.md
-          grep -q "Print functionality" CEF_INTEGRATION.md
-          grep -q "Bounds management" CEF_INTEGRATION.md
-          grep -q "Visibility control" CEF_INTEGRATION.md
-          grep -q "Focus management" CEF_INTEGRATION.md
-          grep -q "WebContext integration" CEF_INTEGRATION.md
+          grep -q "Custom protocol handlers" CEF_INTEGRATION.md || { echo "❌ 'Custom protocol handlers' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "IPC" CEF_INTEGRATION.md || { echo "❌ 'IPC' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Navigation handlers" CEF_INTEGRATION.md || { echo "❌ 'Navigation handlers' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Download handlers" CEF_INTEGRATION.md || { echo "❌ 'Download handlers' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Print functionality" CEF_INTEGRATION.md || { echo "❌ 'Print functionality' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Bounds management" CEF_INTEGRATION.md || { echo "❌ 'Bounds management' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Visibility control" CEF_INTEGRATION.md || { echo "❌ 'Visibility control' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "Focus management" CEF_INTEGRATION.md || { echo "❌ 'Focus management' not found in CEF_INTEGRATION.md"; exit 1; }
+          grep -q "WebContext integration" CEF_INTEGRATION.md || { echo "❌ 'WebContext integration' not found in CEF_INTEGRATION.md"; exit 1; }
           echo "✅ Documentation covers all implemented features"
       
       - name: Documentation summary
+        if: always()
         run: |
-          echo "## CEF Documentation Check" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ All documentation files present" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Feature documentation complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Available documentation:" >> $GITHUB_STEP_SUMMARY
-          echo "- README.md (Updated with CEF feature)" >> $GITHUB_STEP_SUMMARY
-          echo "- CEF_INTEGRATION.md (Architecture guide)" >> $GITHUB_STEP_SUMMARY
-          echo "- CEF_QUICKSTART.md (Quick start guide)" >> $GITHUB_STEP_SUMMARY
-          echo "- examples/CEF_DEMO_README.md (Demo instructions)" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## CEF Documentation Check"
+            echo ""
+            echo "✅ All documentation files present"
+            echo "✅ Feature documentation complete"
+            echo ""
+            echo "### Available documentation:"
+            echo "- README.md (Updated with CEF feature)"
+            echo "- CEF_INTEGRATION.md (Architecture guide)"
+            echo "- CEF_QUICKSTART.md (Quick start guide)"
+            echo "- examples/CEF_DEMO_README.md (Demo instructions)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   cef-lint:
     name: Lint CEF code
@@ -179,7 +184,9 @@ jobs:
       - name: Lint summary
         if: always()
         run: |
-          echo "## CEF Lint Check" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Formatting check completed" >> $GITHUB_STEP_SUMMARY
-          echo "⚠️ Clippy check may be skipped due to CEF binary requirements" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## CEF Lint Check"
+            echo ""
+            echo "✅ Formatting check completed"
+            echo "⚠️ Clippy check may be skipped due to CEF binary requirements"
+          } >> "$GITHUB_STEP_SUMMARY"
